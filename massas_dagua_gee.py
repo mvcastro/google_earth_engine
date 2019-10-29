@@ -13,17 +13,9 @@ def retorna_lista(img, featCol):
   # Inserção da data da imagem analisada nas propriedades da FeatureCollection
   data_count = data_count.map(lambda feat: feat.set('data_analise', img.date().format()))
  
-  # Retona uma FeatureCollection com a média dos valores dos pixels inseridos
-  #  em cada polígono de massa d'água
-  data_count_mean = img.reduceRegions(data_count, ee.Reducer.mean(), 30)
+  feats_stats = data_count.getInfo()['features']
 
-  # Retona uma FeatureCollection com a mediana dos valores dos pixels inseridos
-  #  em cada polígono de massa d'água
-  data_count_mean_median = img.reduceRegions(data_count_mean, ee.Reducer.median(), 30)
-  
-  feats_stats = data_count_mean_median.getInfo()['features']
-
-  return [feats_stats]
+  return feats_stats
 
 
 def retorna_dataframe(result):
@@ -76,15 +68,17 @@ def retorna_dataframe(result):
 
 def retorna_df_merged(lista_result):
 
-    stats = lista_result[0]
-    
-    df_result_stats = retorna_dataframe(stats)
-    
+    df_result_stats = retorna_dataframe(lista_result)
     return df_result_stats
 
 
 if __name__ == "__main__":
 
+    def mascara(img):
+        mask = img.eq(2)
+        maskedImage = img.updateMask(mask)
+        return maskedImage 
+    
     # Tempo inicial
     timeInMsBefore = datetime.now()
 
@@ -110,7 +104,8 @@ if __name__ == "__main__":
         meses = range(1, 2)
 
         # Importa dataset com detcção de água para cada mês da série
-        monthly_hist = ee.ImageCollection('JRC/GSW1_0/MonthlyHistory').select('water')
+        monthly_hist = ee.ImageCollection('JRC/GSW1_0/MonthlyHistory')\
+                            .select('water').map(mascara)
 
         for ano in anos:
             for mes in meses:
@@ -120,9 +115,9 @@ if __name__ == "__main__":
                 # Retorna resultado para a imagem na data em análise e as feições de massa d'água
                 if imagem.size().getInfo() != 0:
                     lista_result = retorna_lista(imagem.first(), massas_dagua_parcial)
-                    df_result = retorna_df_merged(lista_result)
+                    df_result = retorna_dataframe(lista_result)
                     # pasta escolhida para armazenamento dos dados
-                    path = 'C:/Temp/GEE2/resultado_pol_ScriptV3_08_ano{}mes{}_parte{}.csv'.format(\
+                    path = 'C:/Temp/GEE3/resultado_pol_ScriptV3_08_ano{}mes{}_parte{}.csv'.format(\
                             ano, mes, limite)
                     df_result.to_csv(path, sep=';', decimal=',')
 
