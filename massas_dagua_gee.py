@@ -63,7 +63,7 @@ def retorna_dataframe(result):
     if median_flag:
         feature['median'] = median
 
-    return pd.DataFrame(feature, index=data_analise)
+    return pd.DataFrame(feature)
 
 
 def retorna_df_merged(lista_result):
